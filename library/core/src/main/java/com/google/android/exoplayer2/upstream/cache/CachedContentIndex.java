@@ -15,6 +15,8 @@
  */
 package com.google.android.exoplayer2.upstream.cache;
 
+import android.os.Build;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.util.SparseArray;
 import com.google.android.exoplayer2.C;
@@ -34,6 +36,7 @@ import java.io.OutputStream;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -87,7 +90,7 @@ import javax.crypto.spec.SecretKeySpec;
     if (secretKey != null) {
       Assertions.checkArgument(secretKey.length == 16);
       try {
-        cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+        cipher = createCipher();
         secretKeySpec = new SecretKeySpec(secretKey, "AES");
       } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
         throw new IllegalStateException(e); // Should never happen.
@@ -99,6 +102,27 @@ import javax.crypto.spec.SecretKeySpec;
     keyToContent = new HashMap<>();
     idToKey = new SparseArray<>();
     atomicFile = new AtomicFile(new File(cacheDir, FILE_NAME));
+  }
+
+  /**
+   * Create {@link Cipher} with workaround for android 4.3.
+   */
+  @NonNull
+  private Cipher createCipher() throws NoSuchPaddingException, NoSuchAlgorithmException {
+    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN_MR2) {
+      // https://issuetracker.google.com/issues/36976726
+      // https://github.com/google/ExoPlayer/issues/2755
+      try {
+        return Cipher.getInstance("AES/CBC/PKCS5PADDING", "BC");
+      } catch (final NoSuchProviderException ignored) {
+        // ignored
+      } catch (final NoSuchPaddingException ignored) {
+        // ignored
+      } catch (final NoSuchAlgorithmException ignored) {
+        // ignored
+      }
+    }
+    return Cipher.getInstance("AES/CBC/PKCS5PADDING");
   }
 
   /** Loads the index file. */
