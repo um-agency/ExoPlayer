@@ -18,5 +18,7 @@ if (gradle.ext.has('exoplayerModulePrefix')) {
 }
 
 include modulePrefix + 'library-core'
+include modulePrefix + 'extensions-okhttp'
 
 project(modulePrefix + 'library-core').projectDir = new File(rootDir, 'library/core')
+project(modulePrefix + 'extensions-okhttp').projectDir = new File(rootDir, 'extensions/okhttp')
